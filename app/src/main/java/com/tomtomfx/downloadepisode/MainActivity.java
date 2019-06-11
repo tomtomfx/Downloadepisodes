@@ -2,6 +2,7 @@ package com.tomtomfx.downloadepisode;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -38,6 +39,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, Callback {
 
     LinearLayout linearLayout;
+    private Button settingsButton;
     private Button requestButton;
     private TextView resultsTextView;
     private ListView resultsListView;
@@ -53,6 +55,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Retrieve main layout
         linearLayout = findViewById(R.id.linearLayout);
         // Retrieve button and add listener
+        settingsButton = findViewById(R.id.settingsButton);
+        settingsButton.setOnClickListener(this);
+        // Retrieve button and add listener
         requestButton = findViewById(R.id.requestButton);
         requestButton.setOnClickListener(this);
         // Retrieve textView
@@ -67,26 +72,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View view) {
-        if (!isConnected()) {
-            Snackbar.make(view, "Aucune connexion à internet.", Snackbar.LENGTH_LONG).show();
-            return;
-        }
-        snackbar.show();
+        switch(view.getId()) {
+            case R.id.requestButton:
+                if (!isConnected()) {
+                    Snackbar.make(view, "Aucune connexion à internet.", Snackbar.LENGTH_LONG).show();
+                    return;
+                }
+                snackbar.show();
 
-        JSONObject postdata = new JSONObject();
-        try {
-            postdata.put("tablet", "Pixel C");
-        } catch(JSONException e){
-            e.printStackTrace();
-        }
-        RequestBody req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
+                JSONObject postdata = new JSONObject();
+                try {
+                    postdata.put("tablet", "Pixel C");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                RequestBody req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
 
-        Request request = new Request.Builder()
-                .url("http://192.168.1.5/api/episodes/getEpisodesToCopy.php")
-                .method("POST", req)
-                .header("Content-Type", "application/json")
-                .build();
-        client.newCall(request).enqueue(this);
+                Request request = new Request.Builder()
+                        .url("http://192.168.1.5/api/episodes/getEpisodesToCopy.php")
+                        .method("POST", req)
+                        .header("Content-Type", "application/json")
+                        .build();
+                client.newCall(request).enqueue(this);
+                break;
+            case R.id.settingsButton:
+                Intent preferences = new Intent(MainActivity.this, AppPreferences.class);
+                startActivity(preferences);
+                break;
+        }
     }
 
     private boolean isConnected() {

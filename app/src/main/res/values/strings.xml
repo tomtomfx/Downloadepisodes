@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Download episodes</string>
+    <string name="preferences">Settings</string>
 </resources>
