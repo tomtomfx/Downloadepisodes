@@ -75,7 +75,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 else{
                     Toast.makeText(MainActivity.this, "Download completed: "+filename, Toast.LENGTH_LONG).show();
+
+                    // Set episode is on tablet if video is received
+                    // Get extension
+                    String extension = filename.substring(filename.lastIndexOf('.')+1);
+                    if (!extension.equals("srt")) {
+                        String episodeId = filename.substring(0, filename.lastIndexOf('.'));
+                        JSONObject postdata = new JSONObject();
+                        try {
+                            postdata.put("Id", episodeId);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        RequestBody req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
+
+                        Request request = new Request.Builder()
+                                .url("http://" + server + "/api/episodes/setOnTablet.php")
+                                .method("POST", req)
+                                .header("Content-Type", "application/json")
+                                .build();
+                        client.newCall(request).enqueue(MainActivity.this);
+                    }
                 }
+                downloadIDs.remove(id);
             }
         }
     };
@@ -190,42 +212,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             });
         }
         else {
-            // Retrieve all requested episodes
-            Iterator<String> keys = results.keys();
-            while (keys.hasNext()) {
-                String key = keys.next();
-                try {
-                    if (results.get(key) instanceof JSONObject) {
-                        element = new HashMap<>();
-                        JSONObject episode = (JSONObject) results.get(key);
-                        element.put("id", key);
-                        element.put("video", episode.getString("Video"));
-                        element.put("subtitles", episode.getString("Subtitles"));
-                        downloads.add(element);
+            if (response.request().url().url().toString().contains("getEpisodesToCopy")) {
+                // Retrieve all requested episodes
+                Iterator<String> keys = results.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    try {
+                        if (results.get(key) instanceof JSONObject) {
+                            element = new HashMap<>();
+                            JSONObject episode = (JSONObject) results.get(key);
+                            element.put("id", key);
+                            element.put("video", episode.getString("Video"));
+                            element.put("subtitles", episode.getString("Subtitles"));
+                            downloads.add(element);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                }
+                ListAdapter adapter = new SimpleAdapter(this,
+                        downloads,
+                        R.layout.list_3_items,
+                        new String[]{"id", "video", "subtitles"},
+                        new int[]{R.id.line1, R.id.line2, R.id.line3});
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        resultsTextView.setText("");
+                        resultsListView.setAdapter(adapter);
+                    }
+                });
+
+                Iterator<HashMap<String, String>> downloadsIterator = downloads.iterator();
+                while (downloadsIterator.hasNext()) {
+                    HashMap<String, String> download = downloadsIterator.next();
+                    downloadFiles(download.get("id"), download.get("video"), download.get("subtitles"));
                 }
             }
-            ListAdapter adapter = new SimpleAdapter(this,
-                    downloads,
-                    R.layout.list_3_items,
-                    new String[] {"id", "video", "subtitles"},
-                    new int[] {R.id.line1, R.id.line2, R.id.line3 });
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    resultsTextView.setText("");
-                    resultsListView.setAdapter(adapter);
-                }
-            });
-
-            Iterator<HashMap<String, String>> downloadsIterator = downloads.iterator();
-            while(downloadsIterator.hasNext()) {
-                HashMap<String, String> download = downloadsIterator.next();
-                downloadFiles(download.get("id"), download.get("video"), download.get("subtitles"));
-            }
-
         }
     }
 
@@ -251,7 +274,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             long downloadID;
             downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
 
-
             filename = video.substring( video.lastIndexOf('/')+1, video.length() );
             DownloadManager.Request videoRequest=new DownloadManager.Request(Uri.parse(video))
                     .setTitle(episodeID)
@@ -262,6 +284,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     .setAllowedOverMetered(false)
                     .setAllowedOverRoaming(false);
             downloadID = downloadManager.enqueue(videoRequest);
+            String extension = filename.substring(filename.lastIndexOf('.')+1);
+            downloadIDs.put(downloadID, episodeID+"."+extension);
 
             filename = subs.substring(subs.lastIndexOf('/') + 1, subs.length());
             DownloadManager.Request subRequest = new DownloadManager.Request(Uri.parse(subs))
@@ -273,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     .setAllowedOverMetered(false)
                     .setAllowedOverRoaming(false);
             downloadID = downloadManager.enqueue(subRequest);
-            downloadIDs.put(downloadID, filename);
+            downloadIDs.put(downloadID, episodeID+".srt");
         }
     }
 
