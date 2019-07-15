@@ -142,17 +142,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Toast.makeText(MainActivity.this, "Aucune connexion à internet.", Toast.LENGTH_LONG).show();
                     return;
                 }
-                Toast.makeText(MainActivity.this, "Requête en cours d'exécution.", Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this, "Requêtes en cours d'exécution.", Toast.LENGTH_LONG).show();
 
+                // Set tablet last connection
                 JSONObject postdata = new JSONObject();
+                try {
+                    postdata.put("Id", tabletID);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                RequestBody req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
+                Request request = new Request.Builder()
+                        .url("http://"+server+"/api/tablets/setLastConnection.php")
+                        .method("POST", req)
+                        .header("Content-Type", "application/json")
+                        .build();
+                client.newCall(request).enqueue(this);
+
+                // Get episodes to copy on this tablet
+                postdata = new JSONObject();
                 try {
                     postdata.put("tablet", tabletID);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                RequestBody req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
-
-                Request request = new Request.Builder()
+                req = RequestBody.create(MediaType.parse("application/json"), postdata.toString());
+                request = new Request.Builder()
                         .url("http://"+server+"/api/episodes/getEpisodesToCopy.php")
                         .method("POST", req)
                         .header("Content-Type", "application/json")
@@ -278,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             DownloadManager.Request videoRequest=new DownloadManager.Request(Uri.parse(video))
                     .setTitle(episodeID)
                     .setDescription("Downloading")
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setDestinationInExternalPublicDir("/Movies", filename)
                     .setRequiresCharging(false)
                     .setAllowedOverMetered(false)
